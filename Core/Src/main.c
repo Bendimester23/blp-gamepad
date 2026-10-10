@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "protocol.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -93,6 +93,16 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  volatile outbound_packet_t out;
+  out.id = 0x01;
+  out.info.version = 0;
+  out.info.num_buttons = 4;
+  out.info.flags[0] = 0;
+  out.info.flags[1] = 0;
+  out.info.flags[2] = 0;
+  out.crc = out.id ^ out.raw_data[0] ^ out.raw_data[1] ^ out.raw_data[2] ^ out.raw_data[3] ^ out.raw_data[4] ^ out.raw_data[5];
+
+  (void)out;
 
   /* USER CODE END 2 */
 
