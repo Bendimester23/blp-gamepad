@@ -1,7 +1,10 @@
 # 1st gamepad for the BMEVIMIAC19 homework assignment
 
+# MCU
+Cheapest usable STM32 from HESTORE an STM32F030F4P6
+
 # Serial protocol
-Every message is 8 bytes. First byte is command, MSB of first byte is set in case of host->gamepad message. 
+Bidirectional at 9600 baud. Every message is 8 bytes. First byte is command, MSB of first byte is set in case of host->gamepad message. 
 Then 6 bytes variable data. Last byte is checksum, which is the first 7 bytes XORd.
 
 | CMD  | Name       | Data                                                                                                                            |
