@@ -15,12 +15,12 @@ typedef enum {
   } key_event_type_t;
 
 typedef enum: uint16_t {
-    UP = 0,
-    DOWN,
-    LEFT,
-    RIGHT,
-    B,
-    A
+    KEY_UP = 0,
+    KEY_DOWN,
+    KEY_LEFT,
+    KEY_RIGHT,
+    KEY_B,
+    KEY_A
   } key_t;
 
 //Align to 1 byte(no padding)
@@ -52,5 +52,9 @@ typedef union {
 } outbound_packet_t;
 
 #pragma pack(pop)
+
+static uint8_t calculate_packet_checksum(outbound_packet_t pck) {
+    return pck.id ^ pck.raw_data[0] ^ pck.raw_data[1] ^ pck.raw_data[2] ^ pck.raw_data[3] ^ pck.raw_data[4] ^ pck.raw_data[5];
+}
 
 #endif //BLP_GAMEPAD_1_PROTOCOL_H

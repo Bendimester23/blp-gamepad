@@ -58,7 +58,34 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+volatile outbound_packet_t key_packet;
+volatile int key_packet_ready = 0;
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+  GPIO_PinState state;
+  key_t key;
+  switch (GPIO_Pin) {
+    case GPIO_PIN_1:
+      state = HAL_GPIO_ReadPin(GPIOB, GPIO_Pin);
+      key = KEY_UP;
+      break;
+    case GPIO_PIN_5:
+    case GPIO_PIN_6:
+    case GPIO_PIN_7:
+      state = HAL_GPIO_ReadPin(GPIOA, GPIO_Pin);
+      break;
+    default:
+      state = GPIO_PIN_SET;
+      break;
+
+  }
+  key_packet.id = 0x01;
+  key_packet.key_event.type = state == GPIO_PIN_RESET ? KE_DOWN : KE_UP;
+  key_packet.key_event.intensity = 0xffff;
+  key_packet.key_event.key = GPIO_Pin == GPIO_PIN_5 ? KEY_RIGHT : KEY_LEFT;
+  key_packet.crc = calculate_packet_checksum(key_packet);
+  key_packet_ready = 1;
+}
 /* USER CODE END 0 */
 
 /**
@@ -93,16 +120,6 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  volatile outbound_packet_t out;
-  out.id = 0x01;
-  out.info.version = 0;
-  out.info.num_buttons = 4;
-  out.info.flags[0] = 0;
-  out.info.flags[1] = 0;
-  out.info.flags[2] = 0;
-  out.crc = out.id ^ out.raw_data[0] ^ out.raw_data[1] ^ out.raw_data[2] ^ out.raw_data[3] ^ out.raw_data[4] ^ out.raw_data[5];
-
-  (void)out;
 
   /* USER CODE END 2 */
 
@@ -110,6 +127,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    if (key_packet_ready) {
+      key_packet_ready = 0;
+      HAL_UART_Transmit_DMA(&huart1, key_packet.raw, 8);
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
