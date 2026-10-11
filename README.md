@@ -17,11 +17,12 @@ Then 6 bytes variable data. Last byte is checksum, which is the first 7 bytes XO
 | 0x83 | Reset keys | Assume all keys are UP, send 0x01 for every key that isn't.                                                                              |
 
 # Key table
-| Hex  | Name  |
-|------|-------|
-| 0x00 | UP    |
-| 0x01 | DOWN  |
-| 0x02 | LEFT  |
-| 0x03 | RIGHT |
-| 0x04 | B     |
-| 0x05 | A     |
+| Hex  | Name    |
+|------|---------|
+| 0x00 | UNKNOWN |
+| 0x01 | UP      |
+| 0x02 | DOWN    |
+| 0x03 | LEFT    |
+| 0x04 | RIGHT   |
+| 0x05 | B       |
+| 0x06 | A       |

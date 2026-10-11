@@ -21,6 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+
 #include "protocol.h"
 /* USER CODE END Includes */
 
@@ -58,33 +60,51 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-volatile outbound_packet_t key_packet;
-volatile int key_packet_ready = 0;
+uint16_t buttons, old_buttons;
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-  GPIO_PinState state;
-  key_t key;
-  switch (GPIO_Pin) {
-    case GPIO_PIN_1:
-      state = HAL_GPIO_ReadPin(GPIOB, GPIO_Pin);
-      key = KEY_UP;
-      break;
-    case GPIO_PIN_5:
-    case GPIO_PIN_6:
-    case GPIO_PIN_7:
-      state = HAL_GPIO_ReadPin(GPIOA, GPIO_Pin);
-      break;
-    default:
-      state = GPIO_PIN_SET;
-      break;
+uint16_t col_pins[4] = {
+  GPIO_PIN_0,
+  GPIO_PIN_1,
+  GPIO_PIN_9,
+  GPIO_PIN_10
+};
 
-  }
-  key_packet.id = 0x01;
-  key_packet.key_event.type = state == GPIO_PIN_RESET ? KE_DOWN : KE_UP;
-  key_packet.key_event.intensity = 0xffff;
-  key_packet.key_event.key = GPIO_Pin == GPIO_PIN_5 ? KEY_RIGHT : KEY_LEFT;
-  key_packet.crc = calculate_packet_checksum(key_packet);
-  key_packet_ready = 1;
+uint16_t row_pins[4] = {
+  GPIO_PIN_1,
+  GPIO_PIN_7,
+  GPIO_PIN_6,
+  GPIO_PIN_5,
+};
+
+GPIO_TypeDef* row_banks[4] = {
+  GPIOB,
+  GPIOA,
+  GPIOA,
+  GPIOA,
+};
+
+key_t keymap[16] = {
+  KEY_UNKNOWN,
+  KEY_RIGHT,
+  KEY_UNKNOWN,
+  KEY_UNKNOWN,
+  KEY_UNKNOWN,
+  KEY_UNKNOWN,
+  KEY_A,
+  KEY_B,
+  KEY_UP,
+  KEY_UNKNOWN,
+  KEY_DOWN,
+  KEY_UNKNOWN,
+  KEY_UNKNOWN,
+  KEY_LEFT,
+  KEY_UNKNOWN,
+  KEY_UNKNOWN,
+};
+
+int __io_putchar(int ch) {
+  uint8_t data[] = {(uint8_t)ch};
+  HAL_UART_Transmit(&huart1, data, 1, HAL_MAX_DELAY);
 }
 /* USER CODE END 0 */
 
@@ -120,17 +140,47 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  outbound_packet_t key;
+  key.id = 0x01;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    if (key_packet_ready) {
-      key_packet_ready = 0;
-      HAL_UART_Transmit_DMA(&huart1, key_packet.raw, 8);
+    for (volatile int i = 0; i < 4; i++) {
+      for (int k = 0; k < 4; k++) {
+        HAL_GPIO_WritePin(GPIOA, col_pins[k], i == k ? GPIO_PIN_SET : GPIO_PIN_RESET);
+      }
+      for (int k = 0; k < 4; k++) {
+        const volatile uint16_t bit = (HAL_GPIO_ReadPin(row_banks[k], row_pins[k]) == GPIO_PIN_SET) << ((i * 4) + k);
+        if (bit) {
+          buttons |= bit;
+        } else {
+          buttons &= ~(1 << ((i * 4) + k));
+        }
+      }
+      HAL_Delay(1);
     }
+    if (buttons != old_buttons) {
+      const uint16_t diff = buttons ^ old_buttons;
+      for (int i = 0; i < 16; i++) {
+        const uint16_t changed = diff & (1 << i);
+        const uint16_t pressed = buttons & (1 << i);
+        if (changed) {
+          if (keymap[i] != KEY_UNKNOWN) {
+            key.key_event.key = keymap[i];
+            key.key_event.type = pressed ? KE_DOWN : KE_UP;
+            key.key_event.intensity = 0xffff;
+            key.crc = calculate_packet_checksum(key);
+            HAL_UART_Transmit_DMA(&huart1, key.raw, 8);
+          }
+        }
+      }
+      old_buttons = buttons;
+    }
+
+    HAL_Delay(1);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -247,24 +297,27 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pins : PA5 PA6 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, COL0_Pin|COL1_Pin|COL3_Pin|COL2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : COL0_Pin COL1_Pin COL3_Pin COL2_Pin */
+  GPIO_InitStruct.Pin = COL0_Pin|COL1_Pin|COL3_Pin|COL2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : ROW3_Pin ROW2_Pin ROW1_Pin */
+  GPIO_InitStruct.Pin = ROW3_Pin|ROW2_Pin|ROW1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pin : ROW0_Pin */
+  GPIO_InitStruct.Pin = ROW0_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI0_1_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
+  HAL_GPIO_Init(ROW0_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

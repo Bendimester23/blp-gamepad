@@ -15,7 +15,8 @@ typedef enum {
   } key_event_type_t;
 
 typedef enum: uint16_t {
-    KEY_UP = 0,
+    KEY_UNKNOWN = 0,
+    KEY_UP,
     KEY_DOWN,
     KEY_LEFT,
     KEY_RIGHT,
