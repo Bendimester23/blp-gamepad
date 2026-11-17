@@ -5,7 +5,7 @@ Cheapest usable STM32 from HESTORE an STM32F030F4P6
 
 # Serial protocol
 Bidirectional at 9600 baud. Every message is 8 bytes. First byte is command, MSB of first byte is set in case of host->gamepad message. 
-Then 6 bytes variable data. Last byte is checksum, which is the first 7 bytes XORd.
+Then 3 bytes variable data. Last byte is checksum. All 6 bytes summed should be 0.
 
 | CMD  | Name       | Data                                                                                                                                     |
 |------|------------|------------------------------------------------------------------------------------------------------------------------------------------|

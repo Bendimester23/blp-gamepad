@@ -102,10 +102,6 @@ key_t keymap[16] = {
   KEY_UNKNOWN,
 };
 
-int __io_putchar(int ch) {
-  uint8_t data[] = {(uint8_t)ch};
-  HAL_UART_Transmit(&huart1, data, 1, HAL_MAX_DELAY);
-}
 /* USER CODE END 0 */
 
 /**
@@ -171,9 +167,9 @@ int main(void)
           if (keymap[i] != KEY_UNKNOWN) {
             key.key_event.key = keymap[i];
             key.key_event.type = pressed ? KE_DOWN : KE_UP;
-            key.key_event.intensity = 0xffff;
+            key.key_event.intensity = 0xff;
             key.crc = calculate_packet_checksum(key);
-            HAL_UART_Transmit_DMA(&huart1, key.raw, 8);
+            HAL_UART_Transmit_DMA(&huart1, key.raw, 6);
           }
         }
       }

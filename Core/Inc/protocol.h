@@ -7,14 +7,14 @@
 
 #include <stdint.h>
 
-typedef enum {
+typedef enum: uint8_t {
     KE_UP = 0,
     KE_DOWN,
     KE_CHANGE,
     MISSING
   } key_event_type_t;
 
-typedef enum: uint16_t {
+typedef enum: uint8_t {
     KEY_UNKNOWN = 0,
     KEY_UP,
     KEY_DOWN,
@@ -35,27 +35,27 @@ typedef union {
             struct {
                 key_event_type_t type;
                 key_t key;
-                uint16_t intensity;
+                uint8_t intensity;
             } key_event;
 
             struct {
                 uint8_t version;
-                uint16_t num_buttons;
-                uint8_t flags[3];
+                uint8_t num_buttons;
+                uint8_t flags;
             } info;
 
-            uint8_t raw_data[6];
+            uint8_t raw_data[3];
         };
 
-        uint8_t crc;
+        int8_t crc;
     };
-    uint8_t raw[8];
+    uint8_t raw[6];
 } outbound_packet_t;
 
 #pragma pack(pop)
 
-static uint8_t calculate_packet_checksum(outbound_packet_t pck) {
-    return pck.id ^ pck.raw_data[0] ^ pck.raw_data[1] ^ pck.raw_data[2] ^ pck.raw_data[3] ^ pck.raw_data[4] ^ pck.raw_data[5];
+static int8_t calculate_packet_checksum(outbound_packet_t pck) {
+    return ((int8_t)0x7f) - pck.id - pck.raw_data[0] - pck.raw_data[1] - pck.raw_data[2];
 }
 
 #endif //BLP_GAMEPAD_1_PROTOCOL_H
